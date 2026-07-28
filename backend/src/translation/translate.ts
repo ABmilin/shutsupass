@@ -51,7 +51,6 @@ async function translateViaLibreTranslate(text: string, target: SupportedLang): 
   const libreTarget = toLibreTarget(target);
   const likelySource = detectLikelyLang(text);
   if (likelySource === libreTarget) {
-    // 翻訳元と翻訳先が同じ言語と判定された場合は、原文をそのまま返す(呼び出し元でnoteを付与する)
     return text;
   }
 
@@ -116,10 +115,12 @@ export async function translateText(text: string, target: SupportedLang): Promis
   const trimmedText = text.trim();
   const commonTranslation = COMMON_TRANSLATIONS[trimmedText]?.[target];
   if (commonTranslation) {
-    return { translatedText: commonTranslation };
+    return {
+      translatedText: commonTranslation,
+      note: `${LANG_NAME[target]}への参考訳（定型文としてあらかじめ用意した対訳。AI翻訳エンジンは使用していません）`,
+    };
   }
 
-  // TRANSLATION_PROVIDER=ollama の場合のみ、まずOllamaを試す
   if (TRANSLATION_PROVIDER === "ollama") {
     try {
       const translatedText = await translateViaOllama(text, target);
