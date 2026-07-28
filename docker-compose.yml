@@ -1,0 +1,89 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: shutsupass-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-shutsupass}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-shutsupass}
+      POSTGRES_DB: ${POSTGRES_DB:-shutsupass}
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-shutsupass}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  libretranslate:
+    image: libretranslate/libretranslate:v1.9.6
+    container_name: shutsupass-translate
+    restart: unless-stopped
+    user: root
+    environment:
+      # 日本語・英語・中国語のみ読み込み、起動時間・メモリ消費を抑える
+      LT_HOST: 0.0.0.0
+      LT_LOAD_ONLY: en,ja,zh
+      LT_UPDATE_MODELS: "true"
+      LT_DISABLE_WEB_UI: "true"
+      LT_THREADS: "1"
+    ports:
+      - "5050:5000"
+    volumes:
+      - translate_data:/home/libretranslate/.local/share
+
+  # オプション: LLMによる翻訳精度向上を試すためのコンテナ。
+  # TRANSLATION_PROVIDER=ollama の時のみ使われる。既定(libretranslate)では一切呼ばれない。
+  # 初回のみ、モデルの取得が必要(下記READMEの手順を参照)。
+  ollama:
+    image: ollama/ollama:latest
+    container_name: shutsupass-ollama
+    restart: unless-stopped
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+
+  backend:
+    build: ./backend
+    container_name: shutsupass-backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-shutsupass}:${POSTGRES_PASSWORD:-shutsupass}@db:5432/${POSTGRES_DB:-shutsupass}
+      JWT_SECRET: ${JWT_SECRET:-devsecret_change_me}
+      PORT: 4000
+      TRANSLATE_URL: http://libretranslate:5000/translate
+      # ollama に切り替えるには .env で TRANSLATION_PROVIDER=ollama を指定する(既定は libretranslate)
+      TRANSLATION_PROVIDER: ${TRANSLATION_PROVIDER:-libretranslate}
+      OLLAMA_URL: http://ollama:11434/api/generate
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-gemma2:2b}
+    ports:
+      - "4000:4000"
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+
+  frontend:
+    build: ./frontend
+    container_name: shutsupass-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      VITE_API_URL: http://localhost:4000
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+
+volumes:
+  db_data:
+  translate_data:
+  ollama_data:
