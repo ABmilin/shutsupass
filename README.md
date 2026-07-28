@@ -78,23 +78,29 @@ docker compose down -v
 
 ## Ollama（LLMによる高精度な参考翻訳）を使う場合（オプション）
 
-既定ではLibreTranslateのみを使用します。より高精度な翻訳を試したい場合は、以下の手順でOllamaを有効化できます。
+通常の `docker compose up -d --build` でOllamaコンテナも起動します。初回起動時は `ollama-init` コンテナが `OLLAMA_MODEL` で指定したモデルを自動取得します。モデルは数GBあるため、初回のみ時間がかかります。
+
+ただし、既定ではバックエンドはLibreTranslateを使用します。Ollamaを実際の翻訳に使うには、`.env` で `TRANSLATION_PROVIDER=ollama` を指定してください。
 
 ```bash
-# 1. Ollamaコンテナを起動
-docker compose up -d ollama
+# 通常起動。db / backend / frontend / libretranslate / ollama / ollama-init が起動対象になります
+docker compose up -d --build
 
-# 2. 翻訳モデルを取得（初回のみ、数GBあります）
-docker exec -it shutsupass-ollama ollama pull gemma2:2b
+# モデル取得状況の確認
+docker compose logs -f ollama-init
+```
 
-# 3. .env に以下を追記
+Ollama翻訳を有効にする場合:
+
+```bash
 echo "TRANSLATION_PROVIDER=ollama" >> .env
+echo "OLLAMA_MODEL=gemma2:2b" >> .env
 
-# 4. backendを再起動
+# .env の変更をbackendへ反映
 docker compose up -d --build backend
 ```
 
-Ollamaでの翻訳に失敗した場合は、自動的にLibreTranslateへフォールバックします。`.env`の`TRANSLATION_PROVIDER=ollama`を削除（または`libretranslate`に変更）すれば、いつでも既定の動作に戻せます。
+Ollamaでの翻訳に失敗した場合は、自動的にLibreTranslateへフォールバックします。`.env` の `TRANSLATION_PROVIDER=ollama` を削除（または `libretranslate` に変更）すれば、いつでも既定の動作に戻せます。
 
 ## 環境変数
 

@@ -35,9 +35,8 @@ services:
     volumes:
       - translate_data:/home/libretranslate/.local/share
 
-  # オプション: LLMによる翻訳精度向上を試すためのコンテナ。
-  # TRANSLATION_PROVIDER=ollama の時のみ使われる。既定(libretranslate)では一切呼ばれない。
-  # 初回のみ、モデルの取得が必要(下記READMEの手順を参照)。
+  # LLMによる翻訳精度向上を試すためのコンテナ。
+  # 通常起動でも立ち上がるが、backend が実際に使うのは TRANSLATION_PROVIDER=ollama の時のみ。
   ollama:
     image: ollama/ollama:latest
     container_name: shutsupass-ollama
@@ -47,8 +46,7 @@ services:
     volumes:
       - ollama_data:/root/.ollama
 
-      # 初回起動時、モデルが無ければ自動で取得する使い捨てコンテナ。
-  # ollama本体の起動方法は一切変更しないため、前回の再起動ループは起きない。
+  # 初回起動時、モデルが無ければ自動で取得する使い捨てコンテナ。
   # 取得が終わり次第、このコンテナ自体は正常終了する(exited (0)と出るのが正常な状態)。
   ollama-init:
     image: ollama/ollama:latest
@@ -58,7 +56,7 @@ services:
     environment:
       OLLAMA_HOST: http://ollama:11434
       OLLAMA_MODEL: ${OLLAMA_MODEL:-gemma2:2b}
-    entrypoint: ["/bin/sh", "-c", "until ollama pull \"$OLLAMA_MODEL\"; do echo waiting for ollama; sleep 3; done"]
+    entrypoint: ["/bin/sh", "-c", "until ollama pull \"$$OLLAMA_MODEL\"; do echo waiting for ollama; sleep 3; done"]
     restart: "no"
 
   backend:
