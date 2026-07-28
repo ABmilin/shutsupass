@@ -57,6 +57,21 @@ docker compose up --build
 http://localhost:5173
 ```
 
+同一Wi-Fi内の別端末からデモする場合は、MacのIPアドレスを確認し、`.env` の `VITE_API_URL` をそのIPに合わせてから再ビルドしてください。
+
+```bash
+ipconfig getifaddr en0
+# 例: 10.21.132.133 と表示された場合
+VITE_API_URL=http://10.21.132.133:4000
+docker compose up -d --build frontend
+```
+
+この場合、別端末からは以下のようにアクセスします。
+
+```
+http://10.21.132.133:5173
+```
+
 ### テストアカウント
 
 | 区分 | ログインID | パスワード |
