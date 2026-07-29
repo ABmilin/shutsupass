@@ -9,8 +9,8 @@ interface Comment {
   created_at: string;
 }
 
-type Lang = "en" | "zh";
-const LANG_LABEL: Record<Lang, string> = { en: "English", zh: "中文" };
+type Lang = "en" | "zh" | "ja";
+const LANG_LABEL: Record<Lang, string> = { en: "English", zh: "中文", ja: "日本語" };
 
 export default function ApplicationComments({ applicationId }: { applicationId: number }) {
   const [open, setOpen] = useState(false);
@@ -95,7 +95,7 @@ export default function ApplicationComments({ applicationId }: { applicationId: 
                 <p style={{ margin: "0.2rem 0 0" }}>{c.message}</p>
 
                 <div style={{ display: "flex", gap: "0.4rem", marginTop: "0.3rem" }}>
-                  {(["en", "zh"] as Lang[]).map((lang) => (
+                  {(["en", "zh", "ja"] as Lang[]).map((lang) => (
                     <button
                       key={lang}
                       type="button"

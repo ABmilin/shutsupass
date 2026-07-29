@@ -13,7 +13,7 @@ const OLLAMA_URL = process.env.OLLAMA_URL || "http://ollama:11434/api/generate";
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL || "gemma2:2b";
 const OLLAMA_TIMEOUT_MS = 12000;
 
-export type SupportedLang = "en" | "zh";
+export type SupportedLang = "en" | "zh" | "ja";
 type LibreTranslateLang = "auto" | "en" | "ja" | "zh-Hans";
 
 interface TranslateResult {
@@ -21,7 +21,7 @@ interface TranslateResult {
   note?: string;
 }
 
-const COMMON_TRANSLATIONS: Record<string, Record<SupportedLang, string>> = {
+const COMMON_TRANSLATIONS: Record<string, Partial<Record<SupportedLang, string>>> = {
   "こんにちは": { en: "Hello", zh: "你好" },
   "ありがとう": { en: "Thank you", zh: "谢谢" },
   "ありがとうございます": { en: "Thank you", zh: "谢谢" },
@@ -33,10 +33,11 @@ const COMMON_TRANSLATIONS: Record<string, Record<SupportedLang, string>> = {
   "確認しました": { en: "Confirmed", zh: "已确认" },
 };
 
-const LANG_NAME: Record<SupportedLang, string> = { en: "English", zh: "Simplified Chinese" };
+const LANG_NAME: Record<SupportedLang, string> = { en: "English", zh: "Simplified Chinese", ja: "Japanese" };
 
 function toLibreTarget(target: SupportedLang): LibreTranslateLang {
-  return target === "zh" ? "zh-Hans" : target;
+  if (target === "zh") return "zh-Hans";
+  return target;
 }
 
 function detectLikelyLang(text: string): "en" | "ja" | "zh-Hans" | null {
@@ -77,9 +78,9 @@ async function translateViaLibreTranslate(text: string, target: SupportedLang): 
 // LibreTranslateより応答が遅く、タイムアウトの可能性も高いため、短めのタイムアウトを設定している。
 async function translateViaOllama(text: string, target: SupportedLang): Promise<string> {
   const prompt =
-    `Translate the following Japanese text into ${LANG_NAME[target]}. ` +
+    `Detect the language of the following text, then translate it into ${LANG_NAME[target]}. ` +
     `Output ONLY the translated text, with no explanation, no quotes, and no additional commentary.\n\n` +
-    `Japanese text:\n${text}`;
+    `Text:\n${text}`;
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), OLLAMA_TIMEOUT_MS);
